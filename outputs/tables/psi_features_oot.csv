@@ -1,0 +1,15 @@
+﻿feature,value,level
+bc_open_to_buy,0.10064867328094691,需关注
+mo_sin_old_rev_tl_op,0.05854612993277617,稳定
+loan_income_ratio,0.04385144441741747,稳定
+verification_status=Not Verified,0.03190931673076613,稳定
+inq_last_6mths,0.027213691559604153,稳定
+annual_inc,0.009367031563111293,稳定
+num_tl_op_past_12m,0.00852400301583739,稳定
+tot_hi_cred_lim,0.008190725221357182,稳定
+dti,0.006955613971424307,稳定
+mo_sin_rcnt_tl,0.0046442217232114495,稳定
+mths_since_recent_inq,0.004617539424132533,稳定
+term=60 months,0.003758179499802873,稳定
+mths_since_recent_bc,0.00291368685866045,稳定
+acc_open_past_24mths,0.002696325279311529,稳定

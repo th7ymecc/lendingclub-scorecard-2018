@@ -1,0 +1,16 @@
+﻿stage,feature,name_cn,VIF,dropped_later
+剔除前（初始入模集）,acc_open_past_24mths,近24个月新开账户数,2.1799019029527495,False
+剔除前（初始入模集）,num_tl_op_past_12m,近12个月新开账户数,2.383846346254519,False
+剔除前（初始入模集）,mths_since_recent_inq,距最近查询月数,1.3800416066081833,False
+剔除前（初始入模集）,mo_sin_rcnt_tl,最近账户月数,1.7504974418159123,False
+剔除前（初始入模集）,dti,负债收入比,1.2382292948440397,False
+剔除前（初始入模集）,loan_income_ratio,贷款收入比,1.5338870092463244,False
+剔除前（初始入模集）,tot_hi_cred_lim,总授信额度,1.4842307844892564,False
+剔除前（初始入模集）,bc_open_to_buy,银行卡可用额度,2.4285361257063687,False
+剔除前（初始入模集）,verification_status=Not Verified,收入核验=Not Verified,1.099546021424962,False
+剔除前（初始入模集）,mo_sin_old_rev_tl_op,最早循环账户月数,1.14425727035173,False
+剔除前（初始入模集）,term=60 months,期限=60 months,1.2432860624440127,False
+剔除前（初始入模集）,inq_last_6mths,近半年查询次数,1.2515840598279238,False
+剔除前（初始入模集）,annual_inc,年收入,1.9853048866193266,False
+剔除前（初始入模集）,total_bc_limit,银行卡总额度,2.9408124078214146,True
+剔除前（初始入模集）,mths_since_recent_bc,距最近银行卡开户月数,1.4277771522185736,False

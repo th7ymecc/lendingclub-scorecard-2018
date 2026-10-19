@@ -1,0 +1,2 @@
+﻿step,feature,name_cn,p_value,coef,vif_at_removal,max_abs_corr_with_kept,max_corr_partner,univariate_corr_with_y
+p值剔除,total_bc_limit,银行卡总额度,0.3492904400875977,-0.04168858333848063,2.9408124078214146,0.7366165758737189,bc_open_to_buy,0.04278816339864474

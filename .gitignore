@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pip-cache/
+.tmp/
+.mplconfig/
+*.log
+outputs/data/
+outputs/models/
+
+outputs/predictions/

@@ -1,0 +1,2 @@
+﻿threshold,approval_rate,approved_n,rejected_n,approved_bad,rejected_bad,approved_bad_rate,rejected_bad_rate,bad_capture,bad_rate_reduction,dataset,pd_scale,label_scale
+0.26999999999999996,0.7314193622654541,317692.0,116658.0,47281.939625433944,47919.09302940739,0.14882949405535534,0.41076559712499267,0.5033463576297722,0.07035096560814494,valid,lifetime,lifetime_weighted
