@@ -1,7 +1,7 @@
 {
   "project": "LendingClub 信用风险评分卡 / OOT 监控",
-  "generated_at": "2026-10-18 18:47:40",
-  "runtime_seconds": 1101.138,
+  "generated_at": "2026-10-20 23:08:23",
+  "runtime_seconds": 1579.024,
   "config": {
     "train": [
       "2013-01-01",
