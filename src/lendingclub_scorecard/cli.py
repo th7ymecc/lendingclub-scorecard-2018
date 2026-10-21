@@ -10,9 +10,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .config import FEATURE_NAMES, ID_COLUMN, PipelineConfig
+from .config import CATEGORICAL_FEATURES, FEATURE_NAMES, ID_COLUMN, PipelineConfig
 from .data import Preprocessor
 from .pipeline import configure_logging, run_pipeline
+from .policy import DecisionPolicy
 from .scorecard import Scorecard
 
 LOGGER = logging.getLogger(__name__)
@@ -48,11 +49,21 @@ def _prepare_scoring_frame(df: pd.DataFrame) -> pd.DataFrame:
         out["total_bal_income_ratio"] = out["total_bal_ex_mort"] / income
     if "open_acc" in out.columns and "total_acc" in out.columns:
         out["open_acc_ratio"] = out["open_acc"] / out["total_acc"].replace(0, np.nan)
-    missing = [c for c in FEATURE_NAMES if c not in out.columns]
+    required = list(dict.fromkeys([*FEATURE_NAMES, *CATEGORICAL_FEATURES]))
+    missing = [c for c in required if c not in out.columns]
     if missing:
         raise ValueError(f"输入缺少字段: {missing}")
     out = out.replace([np.inf, -np.inf], np.nan)
     return out
+
+
+def _term_num(series: pd.Series) -> pd.Series:
+    """把 '36 months' / 36 统一成 36/60，供终身 PD 查 e(term)。"""
+    if pd.api.types.is_numeric_dtype(series):
+        return pd.to_numeric(series, errors="coerce")
+    return pd.to_numeric(
+        series.astype(str).str.extract(r"(\d+)")[0], errors="coerce"
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -87,21 +98,31 @@ def _cmd_score(args) -> int:
     model_dir = Path(args.model_dir)
     pre = Preprocessor.load(model_dir / "models" / "preprocessor.joblib")
     card = Scorecard.load(model_dir / "scorecard.json")
+    policy = DecisionPolicy.from_artifacts(model_dir)
     df = pd.read_csv(args.input)
     scored_input = _prepare_scoring_frame(df)
     X = pre.transform(scored_input)
-    scored = card.score_frame(X)
-    scored["Probability"] = card.predict_pd(X)
+    score = card.score_frame(X)["score"].to_numpy()
+    p_raw = card.predict_pd(X)
+    term_num = _term_num(scored_input["term"])
+    decision = policy.decide(p_raw, term_num)
     output = pd.DataFrame(
         {
-            "Id": df[ID_COLUMN].to_numpy() if ID_COLUMN in df.columns else np.arange(1, len(df) + 1),
-            "Probability": scored["Probability"].to_numpy(),
-            "score": scored["score"].to_numpy(),
-            "grade": scored["grade"].to_numpy(),
+            "Id": df[ID_COLUMN].to_numpy()
+            if ID_COLUMN in df.columns
+            else np.arange(1, len(df) + 1),
+            "score": score,
+            **decision.to_dict(orient="list"),
         }
     )
     output.to_csv(args.output, index=False, float_format="%.9f")
-    LOGGER.info("打分完成: %s 行 -> %s", f"{len(df):,}", args.output)
+    LOGGER.info(
+        "打分完成: %s 行 -> %s（threshold=%.2f, 批准率 %.2f%%）",
+        f"{len(df):,}",
+        args.output,
+        policy.threshold_lifetime,
+        100.0 * float(output["approve"].mean()),
+    )
     return 0
 
 

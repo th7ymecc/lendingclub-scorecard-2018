@@ -24,10 +24,10 @@
 坏账率 4.84% / 暴露比例 30.40% = 15.92%，与实测终身坏账率 15.91% 吻合。
 （对比：logit 平移会得到 14.31%，系统性低估约 1.6pp，故不采用。）
 
-**e 必须分段估计**。高风险客群的坏样本暴露更快（e 更大），低风险客群更慢（e 更小）。
-若统一用总体 e=0.304，高风险段换算后会超过 1 而被 clip，造成失真。因此按 grade 分段
-实测各自的 e，再做换算。分段变量用 grade 而非模型分数，因为 grade 不参与建模，用它
-分段换算的是"标签成熟度"而非"预测能力"，不引入循环论证。
+**e 必须分段估计**。36/60 期的坏样本暴露节奏不同（e≈0.339 / 0.250），若统一用
+总体 e=0.304，长期限贷款的终身风险会被系统性低估。因此按贷款期限分段实测各自的 e，
+再逐笔换算。grade×期限的细分 e 见 outputs/tables/emergence_grade_within_term.csv，
+当前主流程只使用 term 分段；更细的校准留作后续版本。
 """
 
 from __future__ import annotations
@@ -459,11 +459,12 @@ def threshold_sensitivity(
     让决策者看到阈值随目标漂移的幅度。
 
     注意：阈值扫描用的是校准并换算到终身口径的 PD，因此目标坏账率可以直接按业务
-    语义（终身坏账率）设定，而不是 MOB12 口径的数值。
+    语义（终身坏账率）设定，而不是 MOB12 口径的数值。y 可以是 0/1 标签，也可以是
+    终身加权标签 0/1/e；后者必须用 float 累加，不能转 int。
     """
     from .evaluation import choose_threshold, threshold_scan
 
-    y = np.asarray(y, dtype=int)
+    y = np.asarray(y, dtype=float)
     p = np.asarray(p_lifetime, dtype=float)
     if grid is None:
         # 终身口径 PD 分布更宽，网格需覆盖到 0.9

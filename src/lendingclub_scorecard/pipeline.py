@@ -67,6 +67,7 @@ from .evaluation import (
     threshold_confusion,
     threshold_scan,
 )
+from .policy import DecisionPolicy
 from .model import (
     build_sensitivity_frame,
     coefficient_table,
@@ -78,7 +79,6 @@ from .model import (
     vif_table,
 )
 from .monitoring import build_monitoring_plan
-from .report import build_report
 from .scorecard import build_scorecard
 
 LOGGER = logging.getLogger(__name__)
@@ -329,10 +329,12 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
     # 验证集 fit，OOT 只 transform/评估，否则构成数据泄漏。
     #
     # 口径必须配对：calibration_metrics 的 actual 取自标签，而标签是 vintage 口径，
-    # 所以只有 vintage 尺度上的 PD 能直接用它评估。终身尺度不能拿 vintage 标签去比，
-    # 否则算出的"校准误差"其实全是口径差异。终身尺度的校验改用换算后的实测终身
-    # 坏账率（vintage 实测 / e）作为参照，见 grade_lifetime_calibration 输出。
-    observed_lt_rate = float(np.mean(y_oot)) / float(oot_lt["emergence_frac"].mean())
+    # 所以只有 vintage 尺度上的 PD 能直接用它评估。终身尺度的校验改用加权终身坏账率
+    # E[y/e]：它与阈值扫描、捕获率使用同一个估计量；mean(y)/mean(e) 是比值估计，
+    # 会因期限结构与坏账率相关而与阈值表不一致，故只保留 E[y/e]。
+    observed_lt_rate = float(
+        np.mean(y_oot.to_numpy(dtype=float) / oot_lt["emergence_frac"].to_numpy(dtype=float))
+    )
     calibration_by_scale = pd.DataFrame(
         [
             {
@@ -347,7 +349,7 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
             },
             {
                 "pd_scale": "lifetime",
-                "label_scale": "lifetime（换算后实测）",
+                "label_scale": "lifetime（E[y/e] 加权估计）",
                 "mean_pred": float(np.mean(p_oot_lt)),
                 "actual": observed_lt_rate,
                 "scale_gap": observed_lt_rate - float(np.mean(p_oot_lt)),
@@ -371,7 +373,7 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
                 "口径": "终身（业务决策口径）",
                 "OOT平均PD": float(np.mean(p_oot_lt)),
                 "OOT实测坏账率": observed_lt_rate,
-                "说明": "按期限分段换算，可直接与业务坏账率目标对比",
+                "说明": "按期限分段换算，E[y/e] 加权估计，可直接与业务坏账率目标对比",
             },
         ]
     )
@@ -597,6 +599,23 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
         out / "tables" / "threshold_selected.csv",
     )
 
+    # 打分落地策略：校准器、期限暴露比例、终身 PD 阈值、PD 等级带。
+    # 只保存参数，不保存模型；score_csv.py 与 pipeline 共用同一份口径。
+    policy = DecisionPolicy(
+        platt_a=platt.a_,
+        platt_b=platt.b_,
+        emergence_by_term={
+            str(r.segment): float(r.emergence_frac) for r in term_e.itertuples(index=False)
+        },
+        emergence_default=float(
+            term_e.loc[term_e["segment"] == ALL_SEGMENT, "emergence_frac"].iloc[0]
+        ),
+        threshold_lifetime=float(chosen["threshold"]),
+        grade_pd_cutoffs=tuple(cfg.grade_pd_cutoffs),
+        target_bad_rate=cfg.threshold_target_bad_rate,
+    )
+    policy.save(out / "decision_policy.json")
+
     # 阈值敏感性：多个目标坏账率下的阈值与批准率，暴露选择规则对误差的敏感度
     sens = threshold_sensitivity(
         y_oot_lt,
@@ -648,13 +667,13 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
 
     # ------------------ 8b. 公平对照：拆解 AUC 增量的来源 ------------------
     # 旧版报告称"LightGBM 使用同一套特征，保证对照公平"，但实际是：
-    #   评分卡  = 12 个筛选后变量（WOE + 逻辑回归）
+    #   评分卡  = 14 个筛选后变量（WOE + 逻辑回归）
     #   LightGBM = 82 个预处理后变量（树模型）
     # 两者同时在"变量数量"和"模型形式"两个维度上不同，因此 +0.043 AUC 无法归因。
-    # 这里补第三个模型：LightGBM 只用评分卡最终的那 12 个变量，形成可归因的对照。
-    #   评分卡(12变量, 线性)  vs  LightGBM-12(同12变量, 树)  -> 模型形式贡献
-    #   LightGBM-12           vs  LightGBM-full(82变量, 树)   -> 变量数量贡献
-    # 用 WOE 编码后的 12 个变量喂给树模型，保证与评分卡输入信息完全一致。
+    # 这里补第三个模型：LightGBM 只用评分卡最终的那 14 个变量，形成可归因的对照。
+    #   评分卡(14变量, 线性)  vs  同变量 LightGBM(14变量, 树)  -> 模型形式贡献
+    #   同变量 LightGBM       vs  LightGBM-full(82变量, 树)   -> 变量数量贡献
+    # 用 WOE 编码后的 14 个变量喂给树模型，保证与评分卡输入信息完全一致。
     lgbm_12 = fit_lightgbm(
         X_train_woe, y_train, X_valid_woe, y_valid, cfg, features=selected
     )
@@ -672,7 +691,7 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
     attribution = pd.DataFrame(
         [
             {
-                "model": "WOE 评分卡（12 变量，线性）",
+                "model": "WOE 评分卡（14 变量，线性）",
                 "n_features": len(selected),
                 "model_form": "WOE + Logistic",
                 "oot_auc": auc_card,
@@ -680,7 +699,7 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
                 "role": "基线",
             },
             {
-                "model": "LightGBM-12（同 12 变量，树）",
+                "model": "LightGBM-同变量（14 变量，树）",
                 "n_features": len(selected),
                 "model_form": "Gradient Boosting Tree",
                 "oot_auc": auc_lgbm12,
@@ -842,8 +861,8 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
 
     model_comparison = pd.DataFrame(
         [
-            {"model": "WOE 评分卡（12 变量）", "pd_scale": "vintage_mob12", "auc": metrics["oot"]["auc"], "ks": metrics["oot"]["ks"], "gini": metrics["oot"]["gini"], "pr_auc": metrics["oot"]["pr_auc"], "brier": metrics["oot"]["brier"], "log_loss": metrics["oot"]["log_loss"]},
-            {"model": "LightGBM-12（同 12 变量）", "pd_scale": "vintage_mob12", "auc": m_lgbm12["oot"]["auc"], "ks": m_lgbm12["oot"]["ks"], "gini": m_lgbm12["oot"]["gini"], "pr_auc": m_lgbm12["oot"]["pr_auc"], "brier": m_lgbm12["oot"]["brier"], "log_loss": m_lgbm12["oot"]["log_loss"]},
+            {"model": "WOE 评分卡（14 变量）", "pd_scale": "vintage_mob12", "auc": metrics["oot"]["auc"], "ks": metrics["oot"]["ks"], "gini": metrics["oot"]["gini"], "pr_auc": metrics["oot"]["pr_auc"], "brier": metrics["oot"]["brier"], "log_loss": metrics["oot"]["log_loss"]},
+            {"model": "LightGBM-同变量（14 变量）", "pd_scale": "vintage_mob12", "auc": m_lgbm12["oot"]["auc"], "ks": m_lgbm12["oot"]["ks"], "gini": m_lgbm12["oot"]["gini"], "pr_auc": m_lgbm12["oot"]["pr_auc"], "brier": m_lgbm12["oot"]["brier"], "log_loss": m_lgbm12["oot"]["log_loss"]},
             {"model": "LightGBM-full（82 变量）", "pd_scale": "vintage_mob12", "auc": lgbm_metrics["oot"]["auc"], "ks": lgbm_metrics["oot"]["ks"], "gini": lgbm_metrics["oot"]["gini"], "pr_auc": lgbm_metrics["oot"]["pr_auc"], "brier": lgbm_metrics["oot"]["brier"], "log_loss": lgbm_metrics["oot"]["log_loss"]},
         ]
     )
@@ -868,7 +887,7 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
     add("07_woe", plots.plot_woe, binnings, selected)
     # ROC/KS 是排序指标，用 vintage 口径 PD 即可（终身换算是分段单调，会轻微改变
     # 跨期限次序，但排序能力主要由 vintage PD 决定）。
-    add("08_roc_oot", plots.plot_roc, y_oot, {"WOE 评分卡": p_oot_cal, "LightGBM-12": p_lgbm12_oot, "LightGBM-full": p_lgbm_oot_cal})
+    add("08_roc_oot", plots.plot_roc, y_oot, {"WOE 评分卡": p_oot_cal, "LightGBM-同变量": p_lgbm12_oot, "LightGBM-full": p_lgbm_oot_cal})
     add("09_ks_oot", plots.plot_ks, y_oot, p_oot_cal)
     add(
         "10_calibration_oot",
@@ -979,9 +998,11 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
     _save_table(_metrics_frame({"scorecard": metrics["oot"], "lgbm": lgbm_metrics["oot"]}), out / "tables" / "metrics_oot.csv")
 
     if cfg.make_report:
-        LOGGER.info("生成报告与监控方案...")
-        build_monitoring_plan(ctx, out / "monitoring_plan.md")
-        build_report(ctx, out / "report.html")
+        # 生成监控模板，但不覆盖人工维护的 v3 monitoring_plan.md。
+        # v3 HTML 报告由 scripts/build_v3_report.py 读取产物生成，避免 pipeline
+        # 用 v1 报告生成器覆盖 outputs/report.html。
+        LOGGER.info("生成监控模板（monitoring_plan_generated.md）...")
+        build_monitoring_plan(ctx, out / "monitoring_plan_generated.md")
 
     metadata = {
         "project": "LendingClub 信用风险评分卡 / OOT 监控",
@@ -1019,6 +1040,8 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
             "current_share_2018": float(ctx["current_share_2018"]),
         },
         "selected_features": selected,
+        "grade_pd_cutoffs": [float(c) for c in cfg.grade_pd_cutoffs],
+        "decision_policy_file": "decision_policy.json",
         "metrics": {"scorecard": metrics, "lgbm": lgbm_metrics},
         "metrics_lifetime": metrics_lifetime,
         "bootstrap_auc_oot": bootstrap,
@@ -1045,8 +1068,14 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
             "selected": float(chosen["threshold"]),
             "approval_rate_oot": conf_oot["approval_rate"],
             "approved_bad_rate_oot": conf_oot["approved_bad_rate"],
+            "rejected_bad_rate_oot": (
+                conf_oot["rejected_bad"] / conf_oot["rejected_n"]
+                if conf_oot["rejected_n"]
+                else float("nan")
+            ),
             "bad_capture_oot": conf_oot["bad_capture"],
             "target_bad_rate": cfg.threshold_target_bad_rate,
+            "lifetime_bad_rate_oot": observed_lt_rate,
         },
         "threshold_sensitivity": sens.to_dict(orient="records"),
         "model_attribution": attribution.to_dict(orient="records"),
@@ -1073,7 +1102,7 @@ def run_pipeline(cfg: PipelineConfig | None = None, refresh_data: bool = False) 
 
     LOGGER.info("=" * 78)
     LOGGER.info("完成: %.1f 秒", metadata["runtime_seconds"])
-    LOGGER.info("报告: %s", out / "report.html")
+    LOGGER.info("v3 报告: 运行 scripts/build_v3_report.py")
     LOGGER.info("监控方案: %s", out / "monitoring_plan.md")
     LOGGER.info("评分卡: %s", out / "scorecard.csv")
     LOGGER.info("=" * 78)

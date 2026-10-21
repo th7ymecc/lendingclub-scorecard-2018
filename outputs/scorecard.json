@@ -12,6 +12,13 @@
     "C": 604,
     "D": 592
   },
+  "grade_pd_cutoffs": [
+    0.08,
+    0.12,
+    0.18,
+    0.25
+  ],
+  "grade_note": "grade_cutoffs 是按 MOB12 PD 推出的分数切点（旧口径）；生产等级请用 decision_policy.json 的终身 PD 切点。",
   "grade_labels": {
     "A": "A（低风险）",
     "B": "B（较低风险）",

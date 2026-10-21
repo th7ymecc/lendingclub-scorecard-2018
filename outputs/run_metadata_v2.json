@@ -1,0 +1,344 @@
+{
+  "project": "LendingClub 信用风险评分卡 / OOT 监控",
+  "generated_at": "2026-10-20 23:08:23",
+  "runtime_seconds": 1579.024,
+  "config": {
+    "train": [
+      "2013-01-01",
+      "2015-12-31"
+    ],
+    "valid": [
+      "2016-01-01",
+      "2016-12-31"
+    ],
+    "oot": [
+      "2017-01-01",
+      "2018-03-31"
+    ],
+    "iv_threshold": 0.02,
+    "max_features": 15,
+    "base_score": 600,
+    "pdo": 20,
+    "base_odds": 4.0,
+    "snapshot_date": "2019-03-31",
+    "performance_mob": 12,
+    "threshold_target_bad_rate": 0.15
+  },
+  "data": {
+    "base_rows": 2216466,
+    "train_rows": 791536,
+    "valid_rows": 434350,
+    "oot_rows": 550697,
+    "target_scale": "vintage_mob12",
+    "bad_rate": 0.05241454589557518,
+    "bad_rate_valid": 0.0667549211465408,
+    "bad_rate_oot": 0.05708039085014082,
+    "oot_upper_bound_note": "OOT 上界 2018-03-31 = 快照日 2019-03-31 − 12 个月；2018Q2+ 观察期不足，无法在 MOB 对齐口径下评估，已排除",
+    "current_share_oot": 0.7338619929514422,
+    "current_share_2018": 0.8626081958686734
+  },
+  "selected_features": [
+    "acc_open_past_24mths",
+    "num_tl_op_past_12m",
+    "mths_since_recent_inq",
+    "mo_sin_rcnt_tl",
+    "dti",
+    "loan_income_ratio",
+    "tot_hi_cred_lim",
+    "bc_open_to_buy",
+    "verification_status=Not Verified",
+    "mo_sin_old_rev_tl_op",
+    "term=60 months",
+    "inq_last_6mths",
+    "annual_inc",
+    "mths_since_recent_bc"
+  ],
+  "metrics": {
+    "scorecard": {
+      "train": {
+        "n": 791536,
+        "bad": 41488,
+        "bad_rate": 0.05241454589557518,
+        "auc": 0.6732180354302292,
+        "ks": 0.252249234118177,
+        "ks_threshold": 0.051319367975209244,
+        "gini": 0.34643607086045836,
+        "pr_auc": 0.10005280782259389,
+        "brier": 0.04865485405572672,
+        "log_loss": 0.19600115050574032,
+        "mean_pd": 0.052414545895575176
+      },
+      "valid": {
+        "n": 434350,
+        "bad": 28995,
+        "bad_rate": 0.0667549211465408,
+        "auc": 0.6697176133747258,
+        "ks": 0.2478138747658845,
+        "ks_threshold": 0.04778645534322555,
+        "gini": 0.3394352267494516,
+        "pr_auc": 0.1241957704740899,
+        "brier": 0.061139508501518024,
+        "log_loss": 0.2364785936468921,
+        "mean_pd": 0.04984156454070227
+      },
+      "oot": {
+        "n": 550697,
+        "bad": 31434,
+        "bad_rate": 0.05708039085014082,
+        "auc": 0.6598490650797113,
+        "ks": 0.23142694315130113,
+        "ks_threshold": 0.04170991244430633,
+        "gini": 0.3196981301594226,
+        "pr_auc": 0.10217760738598287,
+        "brier": 0.0529824129924167,
+        "log_loss": 0.21157065411787015,
+        "mean_pd": 0.04555663044207477
+      }
+    },
+    "lgbm": {
+      "train": {
+        "n": 791536,
+        "bad": 41488,
+        "bad_rate": 0.05241454589557518,
+        "auc": 0.792258506729512,
+        "ks": 0.4337685427083689,
+        "ks_threshold": 0.060621718471276266,
+        "gini": 0.5845170134590241,
+        "pr_auc": 0.2330337480259244,
+        "brier": 0.04581239852532448,
+        "log_loss": 0.1773541547636308,
+        "mean_pd": 0.05240239198622386
+      },
+      "valid": {
+        "n": 434350,
+        "bad": 28995,
+        "bad_rate": 0.0667549211465408,
+        "auc": 0.7025465946090071,
+        "ks": 0.29434496122885856,
+        "ks_threshold": 0.04701359821143777,
+        "gini": 0.4050931892180143,
+        "pr_auc": 0.14486203303589296,
+        "brier": 0.06039668977266913,
+        "log_loss": 0.23133903992845342,
+        "mean_pd": 0.049806513319846375
+      },
+      "oot": {
+        "n": 550697,
+        "bad": 31434,
+        "bad_rate": 0.05708039085014082,
+        "auc": 0.6940162960476544,
+        "ks": 0.2820462406707493,
+        "ks_threshold": 0.041812789935384606,
+        "gini": 0.3880325920953087,
+        "pr_auc": 0.11689812086564769,
+        "brier": 0.05251503359239013,
+        "log_loss": 0.20741575642335552,
+        "mean_pd": 0.04584705586308835
+      }
+    }
+  },
+  "metrics_lifetime": {
+    "valid": {
+      "n": 434350,
+      "bad": 28995,
+      "bad_rate": 0.0667549211465408,
+      "auc": 0.6656048283114887,
+      "ks": 0.2395138501997388,
+      "ks_threshold": 0.1983385372244273,
+      "gini": 0.3312096566229774,
+      "pr_auc": 0.12222320123289958,
+      "brier": 0.09556373231986698,
+      "log_loss": 0.37232359623682487,
+      "mean_pd": 0.21909140829213808
+    },
+    "oot": {
+      "n": 550697,
+      "bad": 31434,
+      "bad_rate": 0.05708039085014082,
+      "auc": 0.6570723104460527,
+      "ks": 0.2262965717267854,
+      "ks_threshold": 0.1948499248042657,
+      "gini": 0.3141446208921055,
+      "pr_auc": 0.10081570228320882,
+      "brier": 0.08519382749091325,
+      "log_loss": 0.3316197239494509,
+      "mean_pd": 0.20304137236816897
+    }
+  },
+  "bootstrap_auc_oot": {
+    "mean": 0.6598830342171073,
+    "lower": 0.657008916158231,
+    "upper": 0.6621351802640577,
+    "rounds": 200
+  },
+  "psi": {
+    "valid": 0.00659755414879302,
+    "oot": 0.050293326628828995,
+    "min_period_n": 20000
+  },
+  "calibration_oot": {
+    "scorecard": {
+      "mean_pred": 0.04555663044207477,
+      "actual": 0.05708039085014082,
+      "calibration_intercept": 0.05599509091860999,
+      "calibration_slope": 0.9356133633143382,
+      "ece": 0.011523760408066058,
+      "mce": 0.017610579028471143,
+      "brier": 0.0529824129924167
+    },
+    "lgbm": {
+      "mean_pred": 0.04584705586308835,
+      "actual": 0.05708039085014082,
+      "calibration_intercept": -0.05878024874734633,
+      "calibration_slope": 0.8941379361821264,
+      "ece": 0.011233334987052472,
+      "mce": 0.020054758239730353,
+      "brier": 0.05251503359239013
+    }
+  },
+  "calibration": {
+    "platt_a": 0.994027322678777,
+    "platt_b": 0.30101921866048875,
+    "oot_mean_pd_raw": 0.04555663044207477,
+    "oot_mean_pd_calibrated": 0.06120212254562505,
+    "oot_mean_pd_lifetime": 0.20304137236816897,
+    "oot_observed_vintage_bad_rate": 0.05708039085014082,
+    "oot_observed_lifetime_bad_rate": 0.18175315002928552
+  },
+  "emergence_by_term": {
+    "36": 0.33920141186851976,
+    "60": 0.25003388911481633,
+    "__ALL__": 0.30404340041155564
+  },
+  "swap_set": {
+    "approval_rate": 0.768092072410055,
+    "approved_n": 422986,
+    "scorecard_bad_rate": 0.13739277108705064,
+    "lgbm_bad_rate": 0.12681796584590277,
+    "scorecard_bad_capture": 0.4437976800269615,
+    "lgbm_bad_capture": 0.48660729192905255,
+    "overlap_rate": 0.9073633642721036,
+    "jaccard": 0.830434688534522,
+    "swap_in_n": 39184,
+    "swap_out_n": 39184,
+    "swap_in_bad_rate": 0.21495984374335364,
+    "swap_out_bad_rate": 0.32911344137841286,
+    "net_bad_avoided": 4472.99456973216,
+    "net_good_gain": 4472.99456973216,
+    "swap_in_bad": 8422.98651723957,
+    "swap_out_bad": 12895.98108697173
+  },
+  "interpretability_cost": {
+    "scorecard_features": 14,
+    "lgbm_features": 82,
+    "feature_ratio": 5.857142857142857,
+    "scorecard_bins": 70,
+    "lgbm_trees": 1239,
+    "lgbm_leaves": 38409,
+    "lgbm_max_depth": 21,
+    "lgbm_avg_depth": 7.246497042829358,
+    "lgbm_node_comparisons_per_score": 10052.612903225807,
+    "scorecard_lookups_per_score": 14.0,
+    "scoring_ops_ratio": 718.0437788018434,
+    "top10_gain": 0.4310595111179097,
+    "top20_gain": 0.6629009293133151,
+    "features_for_80pct_gain": 30,
+    "auc_gain": 0.03416723096794305,
+    "auc_gain_model_form": 0.005561944273544284,
+    "auc_gain_feature_count": 0.028605286694398768,
+    "auc_gain_per_extra_feature": 0.0004206659807999819,
+    "auc_gain_per_100_trees": 0.00275764576012454,
+    "scorecard_json_kb": 23.748046875,
+    "lgbm_model_mb": 1.784581184387207,
+    "model_size_ratio": 76.94995476601694
+  },
+  "threshold": {
+    "pd_scale": "lifetime",
+    "selected": 0.26999999999999996,
+    "approval_rate_oot": 0.768092072410055,
+    "approved_bad_rate_oot": 0.13739277108705064,
+    "bad_capture_oot": 0.4437976800269615,
+    "target_bad_rate": 0.15
+  },
+  "threshold_sensitivity": [
+    {
+      "target_bad_rate": 0.12,
+      "min_approval": 0.5,
+      "threshold_pd": 0.44999999999999996,
+      "approval_rate": 0.9420425388189876,
+      "approved_bad_rate": 0.1194475500212036,
+      "bad_capture": 0.16380589965724773,
+      "rejected_bad_rate": 0.38033023153805184,
+      "feasible": true
+    },
+    {
+      "target_bad_rate": 0.15,
+      "min_approval": 0.5,
+      "threshold_pd": 0.8999999999999999,
+      "approval_rate": 0.9981768558753725,
+      "approved_bad_rate": 0.13379286256146614,
+      "bad_capture": 0.007570237227754838,
+      "rejected_bad_rate": 0.5587649402390438,
+      "feasible": true
+    },
+    {
+      "target_bad_rate": 0.18,
+      "min_approval": 0.5,
+      "threshold_pd": 0.8999999999999999,
+      "approval_rate": 0.9981768558753725,
+      "approved_bad_rate": 0.13379286256146614,
+      "bad_capture": 0.007570237227754838,
+      "rejected_bad_rate": 0.5587649402390438,
+      "feasible": true
+    }
+  ],
+  "model_attribution": [
+    {
+      "model": "WOE 评分卡（12 变量，线性）",
+      "n_features": 14,
+      "model_form": "WOE + Logistic",
+      "oot_auc": 0.6598490650797113,
+      "oot_ks": 0.23142694315130113,
+      "role": "基线",
+      "auc_vs_previous": NaN
+    },
+    {
+      "model": "LightGBM-12（同 12 变量，树）",
+      "n_features": 14,
+      "model_form": "Gradient Boosting Tree",
+      "oot_auc": 0.6654110093532556,
+      "oot_ks": 0.23805640192757027,
+      "role": "隔离模型形式",
+      "auc_vs_previous": 0.005561944273544284
+    },
+    {
+      "model": "LightGBM-full（82 变量，树）",
+      "n_features": 82,
+      "model_form": "Gradient Boosting Tree",
+      "oot_auc": 0.6940162960476544,
+      "oot_ks": 0.2820462406707493,
+      "role": "隔离变量数量",
+      "auc_vs_previous": 0.028605286694398768
+    }
+  ],
+  "scorecard": {
+    "base_points": 644,
+    "factor": 28.85390081777927,
+    "offset": 560.0,
+    "grade_cutoffs": {
+      "A": 630,
+      "B": 617,
+      "C": 604,
+      "D": 592
+    }
+  },
+  "lgbm_best_iteration": 1239,
+  "versions": {
+    "python": "3.12.14",
+    "pandas": "2.2.3",
+    "numpy": "2.1.3",
+    "scikit_learn": "1.5.2",
+    "statsmodels": "0.14.4",
+    "platform": "Windows-11-10.0.26200-SP0"
+  }
+}

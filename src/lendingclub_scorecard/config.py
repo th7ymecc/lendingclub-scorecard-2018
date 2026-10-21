@@ -16,7 +16,8 @@ vintage 口径仅 6.81%，相差 3.7 倍）。
 
 注意 vintage 口径的绝对值低于终身坏账率：MOB12 时坏样本仅暴露约 30.4%，实测
 MOB12 vintage 坏账率 4.84%，而成熟 cohort 终身坏账率 15.91%。业务决策需换算到
-终身口径，换算通过 logit 空间平移 log(1 / 暴露占比) 实现（详见 data.py）。
+终身口径，换算在概率空间做除法：p_lifetime = p_vintage / e(term)，不是 logit 平移
+（实现见 calibration.py）。
 
 时间切分（按 issue_d）
 -----------------------

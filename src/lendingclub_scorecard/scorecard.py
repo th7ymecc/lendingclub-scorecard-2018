@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .binning import BinningResult, assign_bin_ids
-from .config import GRADE_LABELS, GRADE_ORDER, PipelineConfig
+from .config import GRADE_LABELS, GRADE_ORDER, GRADE_PD_CUTOFFS, PipelineConfig
 from .model import LogitModel
 
 
@@ -163,6 +163,11 @@ class Scorecard:
             "base_points": int(self.base_points),
             "intercept": float(self.intercept),
             "grade_cutoffs": {k: int(v) for k, v in self.grade_cutoffs.items()},
+            "grade_pd_cutoffs": [float(c) for c in GRADE_PD_CUTOFFS],
+            "grade_note": (
+                "grade_cutoffs 是按 MOB12 PD 推出的分数切点（旧口径）；"
+                "生产等级请用 decision_policy.json 的终身 PD 切点。"
+            ),
             "grade_labels": GRADE_LABELS,
             "features": [f.to_dict() for f in self.features],
         }

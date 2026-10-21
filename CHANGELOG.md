@@ -1,6 +1,25 @@
 # 版本记录
 
-本项目保留完整 Git 历史；旧版报告/监控方案单独归档，v1 与 v2 均可追溯。
+本项目保留完整 Git 历史；旧版报告/监控方案单独归档，v1、v2 与 v3 均可追溯。
+
+## v3.0-p0 — 阈值加权修复 / 终身口径统一 / 打分链路（2026-10-21）
+
+**核心修正**
+
+- 修复 `threshold_sensitivity` 对终身加权标签 `0/1/e` 的 `int` 截断：12%/15%/18% 目标对应阈值由 0.45/0.90/0.90 修正为 **0.21/0.32/0.57**，批准率 **63.25%/84.27%/97.65%**。
+- 收回“15%/18% 目标非绑定”的结论：15% 约束绑定，18% 也并非完全非绑定。
+- 终身坏账率统一为 **E[y/e] = 18.97%**（替代 mean(y)/mean(e)=18.18% 的比值估计）；0.27 阈值下拒绝人群坏账率由 55.88% 修正为 **36.31%**。
+- 新增 `outputs/decision_policy.json`：Platt 参数 + e(term) + 0.27 阈值 + 终身 PD 等级带；`score_csv.py` 输出 `prob_mob12_raw`、`prob_mob12_calibrated`、`prob_lifetime`、`grade`、`approve`。
+- 生产等级改为按终身 PD 8/12/18/25% 划分；`scorecard.json` 的旧分数切点标注为 legacy。
+- 统一 14 变量标签；修正 config docstring 的“logit 平移”表述。
+- 新增 `tests/test_calibration.py`、`tests/test_policy.py`；新增 `scripts/recompute_v3_tables.py`（不重训重算）。
+- 新增 v3 报告 `outputs/report_v3.html`；`outputs/report.html` 指向 v3。
+
+**归档**
+
+- `README_v2_mob12.md`、`EVALUATION_RESPONSE_v2.md`、`outputs/report_v2.html`、`outputs/monitoring_plan_v2_mob12.md`。
+- `outputs/run_metadata_v2.json`、`outputs/tables/threshold_sensitivity_v2.csv`、`outputs/tables/threshold_stability_v2.csv`。
+- Git tag：`v3.0-p0`。
 
 ## v2.0 — MOB12 / 终身 PD / 校准 / 敏感性（2026-10-20）
 

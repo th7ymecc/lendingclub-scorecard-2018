@@ -1,44 +1,40 @@
-# 评审意见处理记录（v2）
+# 评审意见处理记录（v3 / P0）
 
-> 对应 `C:\Users\deee\Desktop\项目评价.txt`。本文件只记录“改了什么、结果如何、哪些没做”，完整论证见 `outputs/report_v2.html`。
+> 对应第二轮评审。v2 的 `EVALUATION_RESPONSE.md` 已归档为 `EVALUATION_RESPONSE_v2.md`；v2 报告保留在 `outputs/report_v2.html`。
 
 ## 结论先说
 
-评价里最关键的判断成立：旧报告把“只保留终态贷款”的 **14.39%** 当成 OOT 批准坏账率，并写进监控基线；这个数字受删失偏差污染，不能作为达标结论。
+第二轮评审指出的核心问题成立：v2 的 `threshold_sensitivity` 把终身加权标签 `0/1/e` 强转成 `int`，36 期权重 2.95 被截成 2、60 期权重 4.0 保留为 4，导致“12%/15%/18% 目标都几乎不约束”的错误结论；同时报告头图用 18.18%、阈值表用 18.97%，两套终身口径混用；报告层的终身 PD/等级/0.27 阈值也没有进入 `score_csv.py`。
 
-v2 已改为 **MOB12 固定窗口**（所有 cohort 截到 12 个月），再按期限分段把 vintage PD 换算成终身 PD。旧 14.39% 基线废弃，旧报告归档为 `outputs/report_v1_terminal.html`。
+v3 只做 P0 修复，不重训模型：修正代码、重算阈值/校准表、统一终身口径、补齐打分链路、归档 v2，并把更细的 e 分层与终身 PD 校准留到 P1。
 
 ## 逐条处理
 
-| 评价点 | 状态 | 处理 | 结果 |
+| 评审点 | 状态 | 处理 | v3 结果 |
 |---|---|---|---|
-| ① OOT 删失偏差 | 已修 | 标签改为 `bad_flag_v12`；OOT 上界 2018-03-31；36/60 期分别估 e；终身换算 `p_lifetime = p_vintage / e(term)` | OOT MOB12 坏账 5.71%；终身加权 18.18%；批准人群终身坏账 13.74%（目标 15%） |
-| ② 阈值敏感性 | 已补 | 目标 12%/15%/18% 三档扫描；阈值统一在终身 PD 上选 | 0.45/0.90/0.90；15%/18% 目标非绑定，说明目标偏松 |
-| ③ FICO 取舍 | 已量化 | 同一 LightGBM、同切分，只加 `fico_mid`；单变量 IV | FICO IV=0.100；OOT AUC +0.0036（0.6940→0.6976） |
-| ④ term 业务耦合 | 已解释 | 36/60 期分别估 e、终身坏账；报告披露“term 是产品变量，生产需锁定时点” | 60 期终身 25.8% vs 36 期 12.7% |
-| ⑤ VIF 幸存者偏差 | 已补 | 剔除前初始集 + 最终集双口径 VIF；selection_log 记录剔除时 VIF/相关/方向 | 初始最大 2.94；最终最大 2.38；`total_bc_limit` 与 `bc_open_to_buy` 相关 0.737，剔除有据 |
-| ⑥ LightGBM 对照不公平 | 已补 | LightGBM-12（同 14 变量）vs full（82 变量） | 同变量 +0.0056；变量数量 +0.0286；旧“+0.043 全是非线性”不成立 |
-| ⑦ 代码瑕疵 | 已清 | 修正 2012–2016 残留 docstring；grade 仅在消融中使用；PSI 用 score 口径并在报告说明 | 见 README / report_v2 |
-| ⑧ 概率校准 | 已完成 | 验证集 fit Platt/isotonic，OOT 只 transform | ECE 1.15%→0.41%（Platt） |
-| ⑧ 拒绝推断 | 未做 | 需要 RejectStats 与拒绝原因；当前只使用已批准贷款 | 列入剩余局限 |
-| ⑧ 真实 MOB vintage | 部分 | 无逐月表现快照，MOB12 用 `last_pymnt_d` 近似事件时点 | 不是真正 months-on-book 累计曲线 |
-| ⑧ 收益优化/公平性 | 未做 | 阈值仍按坏账率约束，未做 LGD/EAD、定价、公平性 | 列入剩余局限 |
+| ① 阈值敏感性 `int` 截断 | 已修 | `calibration.threshold_sensitivity` 改为 `dtype=float`；新增 weighted-label 回归测试 | 12%/15%/18% → 0.21/0.32/0.57，批准率 63.25%/84.27%/97.65% |
+| ② “15%/18% 目标非绑定” | 已收回 | 用 `threshold_scan_oot.csv` 复算并重建报告 | 15% 约束绑定（84.27% 批准）；18% 也非完全非绑定（97.65%） |
+| ③ 18.18% vs 18.97% | 已统一 | pipeline 统一用 `E[y/e]`；`calibration_by_scale`、`pd_scale_comparison`、metadata、README、监控方案同步 | OOT 终身坏账率 **18.97%**；终身平均 PD 20.30%，保守偏差约 1.33pp |
+| ④ 0.27 阈值下拒绝坏账率 55.88% | 已修 | 该值来自 bug 表的 0.90 行；按 0.27 重算 | **36.31%** |
+| ⑤ 报告与打分脚本脱节 | 已修 | 新增 `outputs/decision_policy.json`；`score_csv.py` 加载校准器、e(term)、0.27 阈值、终身 PD 等级带 | 输出 `prob_mob12_raw`、`prob_mob12_calibrated`、`prob_lifetime`、`grade`、`approve` |
+| ⑥ 等级仍按分数切、90% A | 已修 | 生产等级改为按 `prob_lifetime` 的 8/12/18/25% 切；`scorecard.json` 保留旧 `grade_cutoffs` 并标注 legacy | CLI 输出终身 PD 等级；报告 A 段占比 13.22%，不再是 90% |
+| ⑦ 12/14 变量标签不一致 | 已修 | pipeline 表标签与 CSV 统一为 14 变量；LightGBM 同变量模型改名为 `LightGBM-同变量（14 变量）` | 报告表与变量数一致 |
+| ⑧ config docstring 写 logit 平移 | 已修 | 改为概率空间 `p_lifetime = p_vintage / e(term)` | 与 calibration.py/report 一致 |
+| ⑨ 加权标签测试缺失 | 已补 | 新增 `tests/test_calibration.py`（敏感性/稳定性）与 `tests/test_policy.py`（校准/换算/等级/审批） | 全部单测通过 |
+| ⑩ 固定路径/可复现性 | 部分 | README 改为说明 `LC_DATA_DIR`；新增 `scripts/recompute_v3_tables.py` 可不重训重算 | 仍需数据文件才能跑完整 pipeline |
 
-## 关键数字（v2）
+## 关键数字（v3）
 
-- 训练 2013–2015：791,536；验证 2016：434,350；OOT 2017–2018Q1：550,697（均 MOB12 可评估）。
-- 评分卡 OOT AUC 0.6598 / KS 0.2314（MOB12）；终身 AUC 0.6571。
-- OOT MOB12 坏账 5.71%；终身加权 18.18%；平均终身 PD 20.30%。
-- 阈值 0.27（终身 PD）：批准率 76.81%，批准人群终身坏账 13.74%，捕获率 44.38%。
-- 校准：原始 ECE 1.15%，Platt 0.41%，isotonic 0.42%。
-- FICO：+0.0036 AUC；grade：+0.0253（但不可入主模型）。
-- LightGBM-full：AUC 0.6940；LightGBM-12：0.6654；评分卡：0.6598。
-- 可解释性代价：单笔约 10,053 次节点比较 vs 14 次查表（约 718×）；文件约 77×；AUC +0.0342。
+- OOT MOB12 坏账率 5.71%；OOT 终身坏账率（E[y/e]）**18.97%**；平均终身 PD 20.30%。
+- 评分卡 OOT AUC 0.6598 / KS 0.2314；LightGBM-full 0.6940。
+- 生产阈值 0.27（验证集 2016 选出）：OOT 批准率 76.81%、批准坏账 13.74%、拒绝坏账 **36.31%**、捕获 44.38%。
+- 敏感性（OOT 事后重选）：12% → 0.21 / 63.25% / 11.82%；15% → 0.32 / 84.27% / 14.90%；18% → 0.57 / 97.65% / 17.98%。
+- Platt ECE 1.15% → 0.41%；终身 PD 20.30% vs 18.97%，高估约 1.33pp。
 
-## 剩余局限
+## 仍未做（P1/P2）
 
-- 拒绝推断未做；只覆盖已批准贷款。
-- 无逐月表现快照，MOB12 是固定窗口近似，不是真正 MOB 曲线。
-- term 仍是强变量，未做“去掉 term 重训”的完整敏感性。
-- 15%/18% 阈值目标非绑定，需按收益/额度/定价重新设定。
-- 公平性、压力测试、独立验证、生产部署未做。
+- `e` 只按 term 分段；`emergence_grade_within_term.csv` 显示 grade×term 仍有明显差异，终身 PD 在 grade 分层 ratio 0.76–0.92，需要更细的 e 或终身 PD 重校准。
+- FICO 只做了 82 变量 LightGBM 的消融，未做 14 变量 WOE 评分卡 + FICO 的对照。
+- 拒绝推断（RejectStats）、LGD/EAD/资金成本/定价联动、公平性/反歧视、压力测试、独立验证仍未做。
+- `last_pymnt_d` 仍是核销时点的近似；MOB12 标签与真正逐月 MOB 曲线有差距。
+- 生产部署前仍需模型风险评级、审批留痕与独立验证。
