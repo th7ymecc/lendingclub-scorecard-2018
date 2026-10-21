@@ -6,7 +6,8 @@
 >
 > 数据文件：`D:\DATAsupport\accepted_2007_to_2018Q4.csv.gz`  
 > 项目目录：`D:\DATAsupport\lendingclub_scorecard_2018`  
-> 逐条处理记录：[EVALUATION_RESPONSE.md](EVALUATION_RESPONSE.md)
+> 逐条处理记录：[EVALUATION_RESPONSE.md](EVALUATION_RESPONSE.md)  
+> 版本记录：[CHANGELOG.md](CHANGELOG.md)；v1 归档：[README_v1_terminal.md](README_v1_terminal.md)、`outputs/report_v1_terminal.html`、`outputs/monitoring_plan_v1_terminal.md`
 
 ---
 
